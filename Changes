@@ -1,8 +1,9 @@
-$Id: Changes,v 1.8 2002/10/27 00:33:01 mina Exp $
+$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.10 2003/01/05 02:45:51 mina Exp $
 
 Revision history for Perl extension Weather::Underground.
 
 
+2.09	Fixed multi-location match, thanks to Rabin Vincent's submitted code.
 2.08	Fixed multi-location match, thanks to Frederic TYNDIUK's submitted code.
 2.07	Fixed single-location match, thanks to Mike Irwin's submitted patch
 2.06	More changes to properly parse some single-location results.

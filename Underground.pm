@@ -1,7 +1,7 @@
 package Weather::Underground;
 
 #
-# $Id: Underground.pm,v 1.11 2002/10/27 00:33:01 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.13 2003/01/05 02:45:51 mina Exp $
 #
 
 use strict;
@@ -20,7 +20,7 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '2.08';
+$VERSION = '2.09';
 
 
 # Preloaded methods go here.
@@ -209,7 +209,7 @@ sub getweather() {
 	#
 	# The first format is to match multiple-listing matches :
 	#
-	while ($document =~ m|<tr bgcolor=.*?>\n?<td><a\s.*?>([\w\s,]+?)</a></td>\n?<td>\n(\d+)&#176;(\w).*?</td>\n?<td>(\d+)\%</td>\n?<td>.*?</td>\n?<td>(.+?)</td><td>.*?</td>|gs) {
+	while ($document =~ m|<tr bgcolor=.*?>\n?<td><a\s.*?>([\w\s,]+?)</a></td>\n?<td>\n(\d+)&nbsp;&#176;(\w).*?</td>\n?<td>(\d+)\%</td>\n?<td>.*?</td>\n?<td>(.+?)</td><td>.*?</td>|gs) {
 		$place = $1;
 		$temperature = $2;
 		$scale = $3;
