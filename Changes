@@ -1,6 +1,8 @@
-$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.17 2004/04/30 17:52:47 mina Exp $
+$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.18 2004/05/05 19:17:41 mina Exp $
 
 Revision history for Perl extension Weather::Underground.
+
+2.16  Fix single-location match error due to major site layout changes
 
 2.15  Fix single-location match error due to site layout changes
 

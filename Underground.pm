@@ -1,7 +1,7 @@
 package Weather::Underground;
 
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.27 2004/04/30 17:52:47 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.29 2004/05/05 19:17:41 mina Exp $
 #
 
 use strict;
@@ -10,7 +10,7 @@ use LWP::Simple qw($ua get);
 use HTML::TokeParser;
 use Fcntl qw(:flock);
 
-$VERSION = '2.15';
+$VERSION = '2.16';
 
 #
 # GLOBAL Variables Assignments
@@ -563,29 +563,49 @@ sub get_weather {
 				$text = $token->[1] . $parser->get_text();
 				$text =~ s/&#([0-9]{1,3});/chr($1)/ge;
 				$text =~ s/&nbsp;/ /gi;
-				next if $text !~ /[a-z0-9]/i;
-				$text =~ s/^\s+//g;
-				$text =~ s/\s+$//g;
+				$text =~ s/^\s*\W*\s*//g;
+				$text =~ s/\s*\W*\s*$//g;
 				$text =~ s/\s+/ /g;
+				next if $text !~ /[a-z0-9]/i;
+				next if $text eq "IMG";
 
-				if ($text =~ /^(current\s+)?conditions$/i && !$state{"intable"} && $state{"currentconditions"}++) {
+				if ($state{"inheader"}) {
 
 					#
-					# We just entered the table that has the data we want
+					# Text in the header
 					#
-					_debug("Matched conditions text - entered interesting table");
-					$state{"intable"}     = 1;
-					$state{"intopheader"} = 0;
-					$state{"incontent"}   = 0;
+					_debug("Matched text in header [$text]");
+					if ($text =~ /updated\s*:?\s*(.+?)\s*observ/i) {
+						_debug("Matched key UPDATED [$1]");
+						$state{"content_UPDATED"} = $1;
+					}
+					if ($text =~ /observed\s+at\s+:?\s*(.+)/i) {
+						_debug("Matched key PLACE [$1]");
+						$state{"content_PLACE"} = $1;
+					}
 				}
-				elsif ($state{"intopheader"}) {
+				elsif ($state{"insummary"}) {
 
 					#
-					# This is the top header
+					# Text in the summary
 					#
-					_debug("Matched top header text");
-					($state{"content_UPDATED"}) = ($text =~ /updated\s*:?\s*(.+?)\s*observ|\Z/i);
-					($state{"content_PLACE"})   = ($text =~ /observed\s+at\s+:?\s*(.+)/i);
+					_debug("Matched text in summary [$text]");
+					if ($text =~ /[0-9]/) {
+
+						#
+						# It's probably the temperature
+						#
+						_debug("Matched key TEMPERATURE");
+						$state{"content_TEMPERATURE"} .= $text;
+					}
+					elsif ($text =~ /[a-z]/i) {
+
+						#
+						# It's probably the conditions
+						#
+						_debug("Matched key CONDITIONS");
+						$state{"content_CONDITIONS"} = $text;
+					}
 				}
 				elsif ($state{"incontent"}) {
 
@@ -606,40 +626,17 @@ sub get_weather {
 						# It's a content - associate it with the previous header
 						#
 						_debug("Read content text [$text]");
-						$state{ "content_" . $state{"header"} } = $text;
+						$state{ "content_" . $state{"header"} } .= $text . " ";
 					}
 				}
 			}
-			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TR" && $state{"intable"}) {
+			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TR" && $state{"incontent"}) {
 
 				#
-				# It's a new row in the table we're interested in
+				# A new header+content coming up
 				#
-				if (!$state{"intopheader"} && !$state{"incontent"}) {
-
-					#
-					# Should never reach here - but in case we do, we're about to start the top header
-					#
-					_debug("Should not have reached here (new row while in table but not in top header or in content!)");
-					$state{"intopheader"} = 1;
-				}
-				elsif ($state{"intopheader"}) {
-
-					#
-					# The top header is finished and the content is coming up
-					#
-					_debug("New row while in top header - assuming top header ending and content coming up");
-					$state{"intopheader"} = 0;
-					$state{"incontent"}   = 1;
-				}
-				elsif ($state{"incontent"}) {
-
-					#
-					# A new header+content coming up
-					#
-					_debug("New content row starting");
-					$state{"contentnumber"} = 0;
-				}
+				_debug("New content row starting");
+				$state{"contentnumber"} = 0;
 			}
 			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TD" && $state{"incontent"}) {
 
@@ -649,18 +646,86 @@ sub get_weather {
 				_debug("New header or content cell starting");
 				$state{"contentnumber"}++;
 			}
+			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TABLE") {
+
+				#
+				# Start of some table
+				#
+				if (uc($token->[2]->{"id"}) eq "TABLE4") {
+
+					#
+					# Start of the left table
+					#
+					_debug("Entered left table");
+					$state{"lefttable"} = 1;
+				}
+				elsif ($state{"lefttable"} && !$state{"intable"}) {
+
+					#
+					# The first table inside the left table is the main table we want
+					#
+					_debug("Entered main table");
+					$state{"intable"}   = 1;
+					$state{"inheader"}  = 0;
+					$state{"insummary"} = 0;
+					$state{"incontent"} = 0;
+				}
+				elsif ($state{"intable"}) {
+
+					#
+					# Start of a sub-table - just increment intable state so we detect closuee of main table properly
+					#
+					_debug("Sub-table started");
+					$state{"intable"}++;
+					if ($state{"intable"} == 2) {
+
+						#
+						# A new sub-table means we entered header, or jumping to summary or jumping to content
+						#
+						if (!$state{"inheader"} && !$state{"insummary"} && !$state{"incontent"}) {
+							_debug("That sub-table is the header");
+							$state{"inheader"} = 1;
+						}
+					}
+					elsif ($state{"intable"} == 3) {
+
+						#
+						# A new level 3 sub-table could mean we're jumping from header to summary or from summary to content
+						#
+						if ($state{"inheader"}) {
+							_debug("That sub-table is the summary");
+							$state{"inheader"}  = 0;
+							$state{"insummary"} = 1;
+						}
+						elsif ($state{"insummary"}) {
+							_debug("That sub-table is the content");
+							$state{"insummary"} = 0;
+							$state{"incontent"} = 1;
+						}
+					}
+				}
+			}
 			elsif ($token->[0] eq "E" && uc($token->[1]) eq "TABLE" && $state{"intable"}) {
+				if (--$state{"intable"}) {
 
-				#
-				# Done parsing - save the data
-				#
-				_debug("Table closed while in table - end of interesting data");
-				_state2result(\%state, $arrayref);
+					#
+					# Closed table was a sub-table - ignore it
+					#
+					_debug("Sub-table closed");
+				}
+				else {
 
-				#
-				# No need to keep going - it's only 1 location
-				#
-				last;
+					#
+					# Main table closed - Done parsing - save the data
+					#
+					_debug("Main table closed - end of interesting data");
+					_state2result(\%state, $arrayref);
+
+					#
+					# No need to keep going - it's only 1 location
+					#
+					last;
+				}
 			}
 		}
 	}
