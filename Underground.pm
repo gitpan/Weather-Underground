@@ -1,7 +1,7 @@
 package Weather::Underground;
 
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.23 2003/11/13 03:29:26 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.24 2004/01/02 21:30:32 mina Exp $
 #
 
 use strict;
@@ -10,7 +10,7 @@ use LWP::Simple qw($ua get);
 use HTML::TokeParser;
 use Fcntl qw(:flock);
 
-$VERSION = '2.12';
+$VERSION = '2.13';
 
 #
 # GLOBAL Variables Assignments
@@ -99,6 +99,10 @@ This key is ignored if the cache_file key is not supplied.
 =item debug
 
 This key should be set to a true or false false. A false value means no debugging information will be printed, a true value means debug information will be printed.
+
+=item timeout
+
+If the default timeout for the LWP::UserAgent request (180 seconds at the time of this writing) is not enough for you, you can change the timeout by providing this key.  It should contain the timeout for the HTTP request seconds in seconds.
 
 =back
 
@@ -248,8 +252,9 @@ sub new {
 		return undef;
 	}
 	$self = {
-		"place" => $parameters{place},
-		"_url"  => $CGI . '?' . $CGIVAR . '=' . $parameters{place}
+		"place"   => $parameters{place},
+		"timeout" => $parameters{timeout},
+		"_url"    => $CGI . '?' . $CGIVAR . '=' . $parameters{place}
 	};
 	if ($parameters{cache_max_age} && $parameters{cache_file}) {
 
@@ -393,6 +398,10 @@ sub get_weather {
 
 	_debug("Retrieving url " . $self->{_url});
 
+	if ($self->{timeout}) {
+		_debug("Setting timeout for LWP::Simple's LWP::UserAgent object to $self->{timeout}");
+		$ua->timeout($self->{timeout});
+	}
 	$oldagent = $ua->agent();
 	$ua->agent("Weather::Underground version $VERSION");
 	$document = get($self->{_url});

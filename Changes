@@ -1,6 +1,9 @@
-$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.14 2003/11/13 03:29:26 mina Exp $
+$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.15 2004/01/02 21:30:32 mina Exp $
 
 Revision history for Perl extension Weather::Underground.
+
+2.13  Added optional new constructor parameter "timeout" - resolves bug
+      https://rt.cpan.org/NoAuth/Bug.html?id=4808
 
 2.12	Renamed method getweather to get_weather - (getweather still grandfathered)
 		
