@@ -1,5 +1,9 @@
 package Weather::Underground;
 
+#
+# $Id: Underground.pm,v 1.11 2002/10/27 00:33:01 mina Exp $
+#
+
 use strict;
 use vars qw(
 	$VERSION @ISA @EXPORT @EXPORT_OK
@@ -16,7 +20,7 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '2.07';
+$VERSION = '2.08';
 
 
 # Preloaded methods go here.
@@ -241,7 +245,7 @@ sub getweather() {
 	#
 	if ($document =~ /Observed at/) {
 		$place = $self->{_place};
-		($temperature,$scale) = ($document =~ m|<tr BGCOLOR=.*?><td>Temperature</td>\n<td>\n(\d+)&#176;(\w)|);
+		($temperature,$scale) = ($document =~ m|<tr BGCOLOR=.*?><td>Temperature</td>\n<td>\n(\d+)&nbsp;&#176;(\w)|);
 		($humidity) = ($document =~ m|<tr BGCOLOR=.*?><td>Humidity</td>\n<td>(\d+)\%</td></tr>\n|);
 		($conditions) = ($document =~ m|<tr BGCOLOR=.*?><td>Conditions</td>\n<td>(.+?)</td></tr>\n|);
 		$counter++;

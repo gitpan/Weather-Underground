@@ -1,5 +1,9 @@
+$Id: Changes,v 1.8 2002/10/27 00:33:01 mina Exp $
+
 Revision history for Perl extension Weather::Underground.
 
+
+2.08	Fixed multi-location match, thanks to Frederic TYNDIUK's submitted code.
 2.07	Fixed single-location match, thanks to Mike Irwin's submitted patch
 2.06	More changes to properly parse some single-location results.
 2.05	A change I implemented in 2.04 was broken in multi-location match, sometimes causing the name
