@@ -16,7 +16,7 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '2.04';
+$VERSION = '2.05';
 
 
 # Preloaded methods go here.
@@ -201,17 +201,18 @@ sub getweather() {
 	$document =~ s|</b>||g;
 	$document =~ s/((?<=\W)[ \t]+)|([ \t]+(?=\W))//g;
 	$document =~ s/\n{2,}/\n/g;
+	&_debug("I retrieved the following data:\n\n\n\n\n$document\n\n\n\n\n");
 	#
 	# The first format is to match multiple-listing matches :
 	#
-	while ($document =~ m|<tr.*?><td><a.*?>(.+?)</a></td><td>\n(\d+)&#176;(\w).*?</td><td>(\d+)\%</td><td>.*?</td><td>(.+?)</td><td>.*?</td>|gs) {
+	while ($document =~ m|<tr bgcolor=.*?>\n?<td><a\s.*?>([\w\s,]+?)</a></td>\n?<td>\n(\d+)&#176;(\w).*?</td>\n?<td>(\d+)\%</td>\n?<td>.*?</td>\n?<td>(.+?)</td><td>.*?</td>|gs) {
 		$place = $1;
 		$temperature = $2;
 		$scale = $3;
 		$humidity = $4;
 		$conditions = $5;
 		$counter++;
-		&_debug("MULTI-LOCATION PARSED $counter: $place: $conditions: $temperature * $scale . $humidity\% humity");
+		&_debug("MULTI-LOCATION PARSED $counter: conditions: $conditions :: temperature $temperature * $scale :: humidity $humidity\% :: place $place");
 		if ($scale =~ /c/i) {
 			&_debug("Temperature in Celsius. Converting accordingly");
 			$celsius = $temperature;
@@ -223,7 +224,7 @@ sub getweather() {
 			$celsius = int(($temperature  - 32)  / 1.8);
 			}
 		else {
-			&_debug("WARNING: Temperature neight in Celsius or Fahrenheit");
+			&_debug("WARNING: Temperature is neither in Celsius or Fahrenheit");
 			$celsius = $temperature;
 			$fahrenheit = $temperature;
 			}
@@ -257,7 +258,7 @@ sub getweather() {
                         $celsius = int(($temperature  - 32)  / 1.8);
                         }
                 else {
-                        &_debug("WARNING: Temperature neight in Celsius or Fahrenheit");
+                        &_debug("WARNING: Temperature is neither in Celsius or Fahrenheit");
                         $celsius = $temperature;
                         $fahrenheit = $temperature;
                         }

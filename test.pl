@@ -20,7 +20,7 @@ print "ok 1\n";
 
 $weather =
 Weather::Underground->new(
-        place   =>      "Montreal, Canada",
+        place   =>      "Springfield",
         debug           =>      0
         );
 
