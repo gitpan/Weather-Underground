@@ -16,7 +16,7 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '2.03';
+$VERSION = '2.04';
 
 
 # Preloaded methods go here.
@@ -194,10 +194,17 @@ sub getweather() {
 		&_debug("Could not retrieve HTML document " . $self->{_url});
 		return undef;
 		}
+	#
+	# Let's clean up stuff that's there to confuse the parser
+	#
 	$document =~ s|<b>||g;
 	$document =~ s|</b>||g;
-	# The first format is to match multiple listing matches :
-	while ($document =~ m|<tr.*?><td.*?><a.*?>(.+?)</a></td><td.*?>(.+?)&#176; *(.) *</td><td.*?>(.+?)\%</td><td.*?>.+?</td><td.*?>(.+?)</td><td.*?>.*?</td>|g) {
+	$document =~ s/((?<=\W)[ \t]+)|([ \t]+(?=\W))//g;
+	$document =~ s/\n{2,}/\n/g;
+	#
+	# The first format is to match multiple-listing matches :
+	#
+	while ($document =~ m|<tr.*?><td><a.*?>(.+?)</a></td><td>\n(\d+)&#176;(\w).*?</td><td>(\d+)\%</td><td>.*?</td><td>(.+?)</td><td>.*?</td>|gs) {
 		$place = $1;
 		$temperature = $2;
 		$scale = $3;
@@ -228,8 +235,10 @@ sub getweather() {
 			conditions	=>	$conditions
 			});
 		}
+	#
 	# The second format is to match single-listing matches:
-	while ($document =~ m|<tr ><td>Temperature</td>\n<td>([0-9]+)&#176;\s*(\w).*?</td></tr>\n<tr ><td>Humidity</td>\n<td>([0-9]+)\%</td></tr>\n<tr ><td>Dew\s*point</td>\n<td>.+?</td></tr>\n<tr ><td>Wind</td>\n<td>.+?</td></tr>\n<tr ><td>Pressure</td>\n<td>.+?</td></tr>\n<tr ><td>Conditions</td>\n<td>(.+?)</td></tr>|gsi) {
+	#
+	while ($document =~ m|<tr><td>Temperature</td>\n<td>\n([0-9]+)&#176;(\w).*?</td>\n</tr>\n<tr><td>Windchill</td>\n<td>\n.*?</td></tr>\n<tr><td>Humidity</td>\n<td>([0-9]+)\%</td></tr>\n<tr><td>Dew\s*point</td>\n<td>.*?</td></tr>\n<tr><td>Wind</td>\n<td>.*?</td></tr>\n<tr><td>Wind Gust</td>\n.*?</tr>\n<tr><td>Pressure</td>\n<td>.*?</td></tr>\n<tr><td>Conditions</td>\n<td>(.+?)</td></tr>|gsi) {
 		$place = $self->{_place};
 		$temperature = $1;
 		$scale = $2;
