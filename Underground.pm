@@ -16,10 +16,20 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '2.0';
+$VERSION = '2.01';
 
 
 # Preloaded methods go here.
+
+sub _debug() {
+        my $notice = shift;
+        $@ = $notice;
+        if ($DEBUG) {
+                print "$MYNAME DEBUG NOTE: $notice\n";
+                return 1;
+                }
+        return 0;
+        }
 
 # Autoload methods go after =cut, and are processed by the autosplit program.
 
@@ -111,7 +121,7 @@ Your query may result in more than 1 match. Each match is a hash reference added
 
 Example 1: Print all matching information
 
-	See SYNAPSIS
+	See SYNOPSIS
 
 Example 2: Print the Celcius temperature of the first matching place
 
@@ -258,24 +268,6 @@ sub getweather() {
 		return $arrayref;
 		}
 	}
-
-
-
-#
-# Private methods
-#
-
-sub _debug() {
-	my $notice = shift;
-	$@ = $notice;
-	if ($DEBUG) {
-		print "$MYNAME DEBUG NOTE: $notice\n";
-		return 1;
-		}
-	return 0;
-	}
-
-
 
 
 
