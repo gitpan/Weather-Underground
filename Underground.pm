@@ -16,7 +16,7 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '2.05';
+$VERSION = '2.06';
 
 
 # Preloaded methods go here.
@@ -239,12 +239,11 @@ sub getweather() {
 	#
 	# The second format is to match single-listing matches:
 	#
-	while ($document =~ m|<tr><td>Temperature</td>\n<td>\n([0-9]+)&#176;(\w).*?</td>\n</tr>\n<tr><td>Windchill</td>\n<td>\n.*?</td></tr>\n<tr><td>Humidity</td>\n<td>([0-9]+)\%</td></tr>\n<tr><td>Dew\s*point</td>\n<td>.*?</td></tr>\n<tr><td>Wind</td>\n<td>.*?</td></tr>\n<tr><td>Wind Gust</td>\n.*?</tr>\n<tr><td>Pressure</td>\n<td>.*?</td></tr>\n<tr><td>Conditions</td>\n<td>(.+?)</td></tr>|gsi) {
+	if ($document =~ /Observed at/) {
 		$place = $self->{_place};
-		$temperature = $1;
-		$scale = $2;
-		$humidity = $3;
-		$conditions = $4;
+		($temperature,$scale) = ($document =~ m|<tr><td>Temperature</td>\n<td>\n(\d+)&#176;(\w)|);
+		($humidity) = ($document =~ m|<tr><td>Humidity</td>\n<td>(\d+)\%</td></tr>\n|);
+		($conditions) = ($document =~ m|<tr><td>Conditions</td>\n<td>(.+?)</td></tr>\n|);
 		$counter++;
 		&_debug("SINGLE-LOCATION PARSED $counter: $place: $conditions: $temperature * $scale . $humidity\% humity");
                 if ($scale =~ /c/i) {
