@@ -1,7 +1,7 @@
 package Weather::Underground;
 
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.30 2004/05/07 20:07:31 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.32 2004/05/15 14:41:46 mina Exp $
 #
 
 use strict;
@@ -10,7 +10,7 @@ use LWP::Simple qw($ua get);
 use HTML::TokeParser;
 use Fcntl qw(:flock);
 
-$VERSION = '2.17';
+$VERSION = '2.18';
 
 #
 # GLOBAL Variables Assignments
@@ -809,8 +809,8 @@ sub _state2result {
 	}
 
 	$stateref->{"content_TEMPERATURE"} =~ s/\s//g;
-	($temperature_celsius)    = ($stateref->{"content_TEMPERATURE"} =~ /(-?\d+)[^a-z0-9]*?c/i);
-	($temperature_fahrenheit) = ($stateref->{"content_TEMPERATURE"} =~ /(-?\d+)[^a-z0-9]*?f/i);
+	($temperature_celsius)    = ($stateref->{"content_TEMPERATURE"} =~ /(-?(?:\d|\.)+)[^a-z0-9]*?c/i);
+	($temperature_fahrenheit) = ($stateref->{"content_TEMPERATURE"} =~ /(-?(?:\d|\.)+)[^a-z0-9]*?f/i);
 	if (!length($temperature_celsius) && length($temperature_fahrenheit)) {
 		$temperature_celsius = ($temperature_fahrenheit - 32) / 1.8;
 	}
@@ -819,8 +819,8 @@ sub _state2result {
 	}
 
 	$stateref->{"content_WINDCHILL"} =~ s/\s//g;
-	($windchill_celsius)    = ($stateref->{"content_WINDCHILL"} =~ /(-?\d+)[^a-z0-9]*?c/i);
-	($windchill_fahrenheit) = ($stateref->{"content_WINDCHILL"} =~ /(-?\d+)[^a-z0-9]*?f/i);
+	($windchill_celsius)    = ($stateref->{"content_WINDCHILL"} =~ /(-?(?:\d|\.)+)[^a-z0-9]*?c/i);
+	($windchill_fahrenheit) = ($stateref->{"content_WINDCHILL"} =~ /(-?(?:\d|\.)+)[^a-z0-9]*?f/i);
 	if (!length($windchill_celsius) && length($windchill_fahrenheit)) {
 		$windchill_celsius = ($windchill_fahrenheit - 32) / 1.8;
 	}
