@@ -1,6 +1,20 @@
-$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.12 2003/10/31 05:14:44 mina Exp $
+$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.14 2003/11/13 03:29:26 mina Exp $
 
 Revision history for Perl extension Weather::Underground.
+
+2.12	Renamed method getweather to get_weather - (getweather still grandfathered)
+		
+		Added new feature that caches results and allows setting maximum age
+		via new constructor keys cache_file and cache_max_age
+
+		Better POD formatting
+
+2.12a	Fixed bug introduced by web site changes that prevented single-location matches from
+      working properly
+
+		Allow the constructor "new" to accept hashrefs as well as hashes
+
+		Added several debugging statements throughout code
 
 2.11  Fixed both single and multi-location matches.  Guts completely re-written for easier logic
       using HTML::TokeParser instead of the previous quickie nightmarish regex approach
