@@ -40,7 +40,7 @@ else {
 	print "not ok 3\n";
 	}
 
-if ($arrayref->[0]->{fahrenheit} || $arrayref->[0]->{celcius}) {
+if ($arrayref->[0]->{fahrenheit} || $arrayref->[0]->{celsius}) {
 	print "ok 4\n";
 	}
 else {

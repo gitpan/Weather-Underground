@@ -16,7 +16,7 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '2.01';
+$VERSION = '2.02';
 
 
 # Preloaded methods go here.
@@ -100,8 +100,8 @@ Each hash contains the following keys:
 	place
 	(the exact place that was matched)
 
-	celcius
-	(the temperature in celcius)
+	celsius
+	(the temperature in celsius)
 
 	fahrenheit
 	(the temperature in fahrenheit)
@@ -123,7 +123,7 @@ Example 1: Print all matching information
 
 	See SYNOPSIS
 
-Example 2: Print the Celcius temperature of the first matching place
+Example 2: Print the Celsius temperature of the first matching place
 
         use Weather::Underground;
 
@@ -136,7 +136,7 @@ Example 2: Print the Celcius temperature of the first matching place
         $arrayref = $weather->getweather()
                 || die "Error, calling getweather() failed: $@\n";
 
-	print "The celcius temperature at the first matching place is " . $arrayref->[0]->{celcius} . "\n";
+	print "The celsius temperature at the first matching place is " . $arrayref->[0]->{celsius} . "\n";
 
 =head1 ERRORS
 
@@ -184,7 +184,7 @@ sub getweather() {
 	my ($self) = @_;
 	my $document;
 	my ($place, $temperature, $scale, $humidity, $conditions);
-	my ($fahrenheit, $celcius);
+	my ($fahrenheit, $celsius);
 	my $arrayref = [];
 	my $counter = 0;
 	&_debug("Getting weather info for " . $self->{_place});
@@ -206,23 +206,23 @@ sub getweather() {
 		$counter++;
 		&_debug("MULTI-LOCATION PARSED $counter: $place: $conditions: $temperature * $scale . $humidity\% humity");
 		if ($scale =~ /c/i) {
-			&_debug("Temperature in Celcius. Converting accordingly");
-			$celcius = $temperature;
+			&_debug("Temperature in Celsius. Converting accordingly");
+			$celsius = $temperature;
 			$fahrenheit = int(($temperature * 1.8) + 32);
 			}
 		elsif ($scale =~ /f/i) {
 			&_debug("Temperature in Fahrenheit. Converting accordingly");
 			$fahrenheit = $temperature;
-			$celcius = int(($temperature  - 32)  / 1.8);
+			$celsius = int(($temperature  - 32)  / 1.8);
 			}
 		else {
-			&_debug("WARNING: Temperature neight in Celcius or Fahrenheit");
-			$celcius = $temperature;
+			&_debug("WARNING: Temperature neight in Celsius or Fahrenheit");
+			$celsius = $temperature;
 			$fahrenheit = $temperature;
 			}
 		push (@$arrayref, {
 			place	=>	$place,
-			celcius	=>	$celcius,
+			celsius	=>	$celsius,
 			fahrenheit	=>	$fahrenheit,
 			humidity	=>	$humidity,
 			conditions	=>	$conditions
@@ -238,23 +238,23 @@ sub getweather() {
 		$counter++;
 		&_debug("SINGLE-LOCATION PARSED $counter: $place: $conditions: $temperature * $scale . $humidity\% humity");
                 if ($scale =~ /c/i) {
-                        &_debug("Temperature in Celcius. Converting accordingly");
-                        $celcius = $temperature;
+                        &_debug("Temperature in Celsius. Converting accordingly");
+                        $celsius = $temperature;
                         $fahrenheit = int(($temperature * 1.8) + 32);
                         }
                 elsif ($scale =~ /f/i) {
                         &_debug("Temperature in Fahrenheit. Converting accordingly");
                         $fahrenheit = $temperature;
-                        $celcius = int(($temperature  - 32)  / 1.8);
+                        $celsius = int(($temperature  - 32)  / 1.8);
                         }
                 else {
-                        &_debug("WARNING: Temperature neight in Celcius or Fahrenheit");
-                        $celcius = $temperature;
+                        &_debug("WARNING: Temperature neight in Celsius or Fahrenheit");
+                        $celsius = $temperature;
                         $fahrenheit = $temperature;
                         }
                 push (@$arrayref, {
                         place   =>      $place,
-                        celcius =>      $celcius,
+                        celsius =>      $celsius,
                         fahrenheit      =>      $fahrenheit,
                         humidity        =>      $humidity,
                         conditions      =>      $conditions
