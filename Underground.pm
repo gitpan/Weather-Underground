@@ -1,46 +1,24 @@
 package Weather::Underground;
 
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.18 2003/04/22 20:05:18 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.21 2003/10/31 05:14:44 mina Exp $
 #
 
 use strict;
-use vars qw(
-  $VERSION @ISA @EXPORT @EXPORT_OK
-  $CGI $CGIVAR $MYNAME $DEBUG
-);
-use LWP::Simple;
-require Exporter;
-require AutoLoader;
+use vars qw($VERSION $CGI $CGIVAR $MYNAME $DEBUG);
+use LWP::Simple qw($ua get);
+use HTML::TokeParser;
 
-@ISA = qw(Exporter AutoLoader);
+$VERSION = '2.11';
 
-# Items to export into callers namespace by default. Note: do not export
-# names by default without a very good reason. Use EXPORT_OK instead.
-# Do not simply export all your public functions/methods/constants.
-@EXPORT = qw(
+#
+# GLOBAL Variables Assignments
+#
 
-);
-$VERSION = '2.10';
-
-# Preloaded methods go here.
-
-sub _debug {
-	my $notice = shift;
-	$@ = $notice;
-	if ($DEBUG) {
-		print "$MYNAME DEBUG NOTE: $notice\n";
-		return 1;
-	}
-	return 0;
-}
-
-# Autoload methods go after =cut, and are processed by the autosplit program.
-
-1;
-__END__
-
-# Below is the stub of documentation for your module. You better edit it!
+$CGI    = 'http://www.wunderground.com/cgi-bin/findweather/getForecast';
+$CGIVAR = 'query';
+$MYNAME = "Weather::Underground";
+$DEBUG  = 0;
 
 =head1 NAME
 
@@ -105,22 +83,38 @@ Each hash contains the following keys:
 	place
 	(the exact place that was matched)
 
-	celsius
+	temperature_celsius
 	(the temperature in celsius)
 
-	fahrenheit
+	temperature_fahrenheit
 	(the temperature in fahrenheit)
 
 	humidity
 	(humidity percentage)
 
 	conditions
-	(a 1-3 word sentence describing overall conditions, example: 'Partly cloudy')
-	
+	(current sky, example: 'Partly cloudy')
+
+	wind
+	(wind direction and speed)
+
+	pressure
+	(the barometric pressure)
+
+	windchill_celsius
+	(the temperature in celsius with wind chill considered)
+
+	windchill_fahrenheit
+	(the temperature in fahrenheit with wind chill considered)
+
+	updated
+	(when the content was last updated on the server)
 
 =head1 NOTICE
 
-Your query may result in more than 1 match. Each match is a hash reference added as a new value in the array which getweather() returns the reference to.
+1. Your query may result in more than 1 match. Each match is a hash reference added as a new value in the array which getweather() returns the reference to.
+
+2. Due to the differences between single and multiple-location matches, some of the keys listed above may not be available in multi-location matches.
 
 =head1 EXAMPLES
 
@@ -141,7 +135,7 @@ Example 2: Print the Celsius temperature of the first matching place
         $arrayref = $weather->getweather()
                 || die "Error, calling getweather() failed: $@\n";
 
-	print "The celsius temperature at the first matching place is " . $arrayref->[0]->{celsius} . "\n";
+	print "The celsius temperature at the first matching place is " . $arrayref->[0]->{temperature_celsius} . "\n";
 
 =head1 ERRORS
 
@@ -160,14 +154,6 @@ mnaguib@cpan.org
 Copyright (C) 2002-2003 Mina Naguib.  All rights reserved.  Use is subject to the Perl license.
 
 =cut
-#
-# GLOBAL Variables Assignments
-#
-
-$CGI    = 'http://www.wunderground.com/cgi-bin/findweather/getForecast';
-$CGIVAR = 'query';
-$MYNAME = "Weather::Underground";
-$DEBUG  = 0;
 
 #
 # Public methods
@@ -193,110 +179,322 @@ sub new {
 sub getweather {
 	my ($self) = @_;
 	my $document;
-	my ($place, $temperature, $scale, $humidity, $conditions);
-	my ($fahrenheit, $celsius);
+	my $parser;
+	my $token;
+	my %state;
+	my $text;
 	my $arrayref = [];
-	my $counter  = 0;
+	my $oldagent;
+
 	_debug("Getting weather info for " . $self->{_place});
 	_debug("Retrieving url " . $self->{_url});
+
+	$oldagent = $ua->agent();
+	$ua->agent("Weather::Underground version $VERSION");
 	$document = get($self->{_url});
+	$ua->agent($oldagent);
 
 	if (!$document) {
 		_debug("Could not retrieve HTML document " . $self->{_url});
 		return undef;
 	}
-
-	#
-	# Let's clean up stuff that's there to confuse the parser
-	#
-	$document =~ s|<b>||g;
-	$document =~ s|</b>||g;
-	$document =~ s/((?<=\W)[ \t]+)|([ \t]+(?=\W))//g;
-	$document =~ s/\n{2,}/\n/g;
-	$document =~ s/\r//g;
-	_debug("I retrieved the following data:\n\n\n\n\n$document\n\n\n\n\n");
-
-	#
-	# The first format is to match multiple-listing matches :
-	#
-	while ($document =~ m|<tr bgcolor=.*?>\n?<td><a\s.*?>([\w\s,]+?)</a></td>\n?<td>\n(\d+)&nbsp;&#176;(\w).*?</td>\n?<td>(\d+)\%</td>\n?<td>.*?</td>\n?<td>(.+?)</td><td>.*?</td>|gs) {
-		$place       = $1;
-		$temperature = $2;
-		$scale       = $3;
-		$humidity    = $4;
-		$conditions  = $5;
-		$counter++;
-		_debug("MULTI-LOCATION PARSED $counter: conditions: $conditions :: temperature $temperature * $scale :: humidity $humidity\% :: place $place");
-		if ($scale =~ /c/i) {
-			_debug("Temperature in Celsius. Converting accordingly");
-			$celsius    = $temperature;
-			$fahrenheit = int(($temperature * 1.8) + 32);
-		}
-		elsif ($scale =~ /f/i) {
-			_debug("Temperature in Fahrenheit. Converting accordingly");
-			$fahrenheit = $temperature;
-			$celsius    = int(($temperature - 32) / 1.8);
-		}
-		else {
-			_debug("WARNING: Temperature is neither in Celsius or Fahrenheit");
-			$celsius    = $temperature;
-			$fahrenheit = $temperature;
-		}
-		push (
-			@$arrayref,
-			{
-				place      => $place,
-				celsius    => $celsius,
-				fahrenheit => $fahrenheit,
-				humidity   => $humidity,
-				conditions => $conditions
-			}
-		);
+	else {
+		_debug("I retrieved the following data:\n\n\n\n\n$document\n\n\n\n\n");
 	}
 
 	#
-	# The second format is to match single-listing matches:
+	# Some minor cleanup to preserve our sanity and regexes:
 	#
-	if ($document =~ /Observed at/) {
-		$place = $self->{_place};
-		($temperature, $scale) = ($document =~ m|<tr BGCOLOR=.*?><td[^>]*>Temperature</td>\n<td>\n(\d+)&nbsp;&#176;(\w)|);
-		($humidity)   = ($document =~ m|<tr BGCOLOR=.*?><td>Humidity</td>\n<td>(\d+)\%</td></tr>\n|);
-		($conditions) = ($document =~ m|<tr BGCOLOR=.*?><td>Conditions</td>\n<td>(.+?)</td></tr>\n|);
-		$counter++;
-		_debug("SINGLE-LOCATION PARSED $counter: $place: $conditions: $temperature * $scale . $humidity\% humidity");
-		if ($scale =~ /c/i) {
-			_debug("Temperature in Celsius. Converting accordingly");
-			$celsius    = $temperature;
-			$fahrenheit = int(($temperature * 1.8) + 32);
-		}
-		elsif ($scale =~ /f/i) {
-			_debug("Temperature in Fahrenheit. Converting accordingly");
-			$fahrenheit = $temperature;
-			$celsius    = int(($temperature - 32) / 1.8);
-		}
-		else {
-			_debug("WARNING: Temperature is neither in Celsius or Fahrenheit");
-			$celsius    = $temperature;
-			$fahrenheit = $temperature;
-		}
-		push (
-			@$arrayref,
-			{
-				place      => $place,
-				celsius    => $celsius,
-				fahrenheit => $fahrenheit,
-				humidity   => $humidity,
-				conditions => $conditions
-			}
-		);
+	$document =~ s/<\/?[bi]>//gi;
+	$document =~ s/<br>/\n/gi;
+	_debug("After cleanup, document data:\n\n\n\n\n$document\n\n\n\n\n");
+
+	_debug("Beginning parsing");
+	unless ($parser = HTML::TokeParser->new(\$document)) {
+		_debug("Failed to create parser object");
+		return undef;
 	}
-	if (!$counter) {
+
+	if ($document =~ /search results/i) {
+
+		#
+		# We use multi-location algorithm
+		#
+		_debug("Multi-location result detected");
+
+		while ($token = $parser->get_token) {
+			if ($token->[0] eq "T" && !$token->[2] && $state{"intable"}) {
+
+				#
+				# The beginning of a text token - retrieve the whole thing and clean it up
+				#
+				$text = $token->[1] . $parser->get_text();
+				$text =~ s/&#([0-9]{1,3});/chr($1)/ge;
+				$text =~ s/&nbsp;/ /gi;
+				next if $text !~ /[a-z0-9]/i;
+				$text =~ s/^\s+//g;
+				$text =~ s/\s+$//g;
+				$text =~ s/\s+/ /g;
+				if ($state{"inheader"}) {
+
+					#
+					# This is the title for a header column - store it for later use when encountering content under same column
+					#
+					$state{"header_$state{headernumber}"} = uc($text);
+				}
+				elsif ($state{"incontent"}) {
+
+					#
+					# This is content we're interested in - store it under the header title of the same column number
+					#
+					$state{ "content_" . $state{ "header_" . $state{"contentnumber"} } } = $text;
+				}
+			}
+			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TH") {
+
+				#
+				# A new cell in the header of the table that has the info we need has started
+				#
+				$state{"headernumber"}++;
+				$state{"inheader"}  = 1;
+				$state{"intable"}   = 1;
+				$state{"incontent"} = 0;
+			}
+			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TR" && $state{"intable"}) {
+
+				#
+				# A new row in the table we're interested in started
+				#
+				if ($state{"inheader"}) {
+
+					#
+					# This is the end of the header and the beginning of the content rows
+					#
+					$state{"inheader"}      = 0;
+					$state{"incontent"}     = 1;
+					$state{"contentnumber"} = 0;
+				}
+				elsif ($state{"incontent"}) {
+
+					#
+					# This is a new content row beginning
+					#
+					$state{"contentnumber"} = 0;
+
+					#
+					# Erase the data remembered from any previous rows
+					#
+					foreach (keys %state) {
+						delete $state{$_} if /^content_/;
+					}
+				}
+			}
+			elsif ($token->[0] eq "E" && uc($token->[1]) eq "TR" && $state{"incontent"}) {
+
+				#
+				# This is the end of a content row
+				#
+				# Save the data
+				#
+				_state2result(\%state, $arrayref);
+
+			}
+
+			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TD" && $state{"incontent"}) {
+
+				#
+				# The beginning of a new cell with content
+				#
+				$state{"contentnumber"}++;
+			}
+			elsif ($token->[0] eq "E" && uc($token->[1]) eq "TABLE" && $state{"intable"}) {
+
+				#
+				# The table that has the data is finished - no need to keep parsing
+				#
+				last;
+			}
+		}
+
+	}
+
+	else {
+
+		#
+		# We use single-location algorithm
+		#
+		while ($token = $parser->get_token) {
+			if ($token->[0] eq "T" && !$token->[2]) {
+
+				#
+				# The beginning of a text token - retrieve the whole thing and clean it up
+				#
+				$text = $token->[1] . $parser->get_text();
+				$text =~ s/&#([0-9]{1,3});/chr($1)/ge;
+				$text =~ s/&nbsp;/ /gi;
+				next if $text !~ /[a-z0-9]/i;
+				$text =~ s/^\s+//g;
+				$text =~ s/\s+$//g;
+				$text =~ s/\s+/ /g;
+
+				if (uc($text) eq "CONDITIONS" && !$state{"intable"}) {
+
+					#
+					# We just entered the table that has the data we want
+					#
+					$state{"intable"}     = 1;
+					$state{"intopheader"} = 0;
+					$state{"incontent"}   = 0;
+				}
+				elsif ($state{"intopheader"}) {
+
+					#
+					# This is the top header
+					#
+					($state{"content_UPDATED"}) = ($text =~ /updated\s*:?\s*(.+?)\s*observ|\Z/i);
+					($state{"content_PLACE"})   = ($text =~ /observed\s+at\s+:?\s*(.+)/i);
+				}
+				elsif ($state{"incontent"}) {
+
+					#
+					# This is either a header or a content, depending on the column number
+					#
+					if ($state{"contentnumber"} == 1) {
+
+						#
+						# It's a header - remember to associate the upcoming content under it
+						#
+						$state{"header"} = uc($text);
+					}
+					else {
+
+						#
+						# It's a content - associate it with the previous header
+						#
+						$state{ "content_" . $state{"header"} } = $text;
+					}
+				}
+			}
+			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TR" && $state{"intable"}) {
+
+				#
+				# It's a new row in the table we're interested in
+				#
+				if (!$state{"intopheader"} && !$state{"incontent"}) {
+
+					#
+					# Should never reach here - but in case we do, we're about to start the top header
+					#
+					$state{"intopheader"} = 1;
+				}
+				elsif ($state{"intopheader"}) {
+
+					#
+					# The top header is finished and the content is coming up
+					#
+					$state{"intopheader"} = 0;
+					$state{"incontent"}   = 1;
+				}
+				elsif ($state{"incontent"}) {
+
+					#
+					# A new header+content coming up
+					#
+					$state{"contentnumber"} = 0;
+				}
+			}
+			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TD" && $state{"incontent"}) {
+
+				#
+				# A new header or content cell is starting
+				#
+				$state{"contentnumber"}++;
+			}
+			elsif ($token->[0] eq "E" && uc($token->[1]) eq "TABLE" && $state{"intable"}) {
+
+				#
+				# Done parsing - save the data
+				#
+				_state2result(\%state, $arrayref);
+
+				#
+				# No need to keep going - it's only 1 location
+				#
+				last;
+			}
+		}
+	}
+
+	if (!@$arrayref) {
 		_debug("No matching places found");
 		return undef;
 	}
 	else {
 		return $arrayref;
 	}
+
 }
 
+##################################################################################################################################
+#
+# Internal subroutines
+#
+sub _debug {
+	my $notice = shift;
+	$@ = $notice;
+	if ($DEBUG) {
+		print "$MYNAME DEBUG NOTE: $notice\n";
+		return 1;
+	}
+	return 0;
+}
+
+sub _state2result {
+	my $stateref = shift;
+	my $arrayref = shift;
+	my ($temperature_fahrenheit, $temperature_celsius);
+	my ($windchill_fahrenheit,   $windchill_celsius);
+
+	$stateref->{"content_TEMPERATURE"} =~ s/\s//g;
+	($temperature_celsius)    = ($stateref->{"content_TEMPERATURE"} =~ /(-?\d+)[^a-z0-9]*?c/i);
+	($temperature_fahrenheit) = ($stateref->{"content_TEMPERATURE"} =~ /(-?\d+)[^a-z0-9]*?f/i);
+	if (!length($temperature_celsius) && length($temperature_fahrenheit)) {
+		$temperature_celsius = ($temperature_fahrenheit - 32) / 1.8;
+	}
+	elsif (!length($temperature_fahrenheit) && length($temperature_celsius)) {
+		$temperature_fahrenheit = ($temperature_celsius * 1.8) + 32;
+	}
+
+	$stateref->{"content_WINDCHILL"} =~ s/\s//g;
+	($windchill_celsius)    = ($stateref->{"content_WINDCHILL"} =~ /(-?\d+)[^a-z0-9]*?c/i);
+	($windchill_fahrenheit) = ($stateref->{"content_WINDCHILL"} =~ /(-?\d+)[^a-z0-9]*?f/i);
+	if (!length($windchill_celsius) && length($windchill_fahrenheit)) {
+		$windchill_celsius = ($windchill_fahrenheit - 32) / 1.8;
+	}
+	elsif (!length($windchill_fahrenheit) && length($windchill_celsius)) {
+		$windchill_fahrenheit = ($windchill_celsius * 1.8) + 32;
+	}
+
+	$stateref->{"content_HUMIDITY"} =~ s/[^0-9]//g;
+	push(
+		@$arrayref,
+		{
+			place                  => $stateref->{"content_PLACE"},
+			temperature_celsius    => $temperature_celsius,
+			temperature_fahrenheit => $temperature_fahrenheit,
+			celsius                => $temperature_celsius,                # Legacy
+			fahrenheit             => $temperature_fahrenheit,             # Legacy
+			windchill_celsius      => $windchill_celsius,
+			windchill_fahrenheit   => $windchill_fahrenheit,
+			humidity               => $stateref->{"content_HUMIDITY"},
+			conditions             => $stateref->{"content_CONDITIONS"},
+			wind                   => $stateref->{"content_WIND"},
+			updated                => $stateref->{"content_UPDATED"},
+			pressure               => $stateref->{"content_PRESSURE"},
+		}
+	);
+
+}
+
+# Leave me alone:
 1;

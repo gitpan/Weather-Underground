@@ -1,5 +1,5 @@
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/test.pl,v 1.10 2003/04/22 20:24:11 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/test.pl,v 1.11 2003/10/31 05:16:22 mina Exp $
 #
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl test.pl'
@@ -46,7 +46,7 @@ else {
 	print "not ok 3\n";
 }
 
-if ($arrayref->[0]->{fahrenheit} || $arrayref->[0]->{celsius}) {
+if ($arrayref->[0]->{temperature_fahrenheit} || $arrayref->[0]->{temperature_celsius}) {
 	print "ok 4\n";
 }
 else {
@@ -77,7 +77,7 @@ else {
 	print "not ok 6\n";
 }
 
-if ($arrayref->[0]->{fahrenheit} || $arrayref->[0]->{celsius}) {
+if ($arrayref->[0]->{temperature_fahrenheit} || $arrayref->[0]->{temperature_celsius}) {
 	print "ok 7\n";
 }
 else {
