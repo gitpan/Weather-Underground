@@ -1,7 +1,7 @@
 package Weather::Underground;
 
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.29 2004/05/05 19:17:41 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.30 2004/05/07 20:07:31 mina Exp $
 #
 
 use strict;
@@ -10,7 +10,7 @@ use LWP::Simple qw($ua get);
 use HTML::TokeParser;
 use Fcntl qw(:flock);
 
-$VERSION = '2.16';
+$VERSION = '2.17';
 
 #
 # GLOBAL Variables Assignments
@@ -657,9 +657,9 @@ sub get_weather {
 					# Start of the left table
 					#
 					_debug("Entered left table");
-					$state{"lefttable"} = 1;
+					$state{"inlefttable"} = 1;
 				}
-				elsif ($state{"lefttable"} && !$state{"intable"}) {
+				elsif (uc($token->[2]->{"class"}) eq "SMALLTABLE" && $state{"inlefttable"} && !$state{"intable"}) {
 
 					#
 					# The first table inside the left table is the main table we want
