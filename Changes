@@ -1,6 +1,9 @@
-$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.15 2004/01/02 21:30:32 mina Exp $
+$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.16 2004/01/06 19:14:57 mina Exp $
 
 Revision history for Perl extension Weather::Underground.
+
+2.14	Fixed some warnings about uninitialized values, thanks to
+	   "John P. Linderman" <jpl@research.att.com>
 
 2.13  Added optional new constructor parameter "timeout" - resolves bug
       https://rt.cpan.org/NoAuth/Bug.html?id=4808

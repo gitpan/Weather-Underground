@@ -1,7 +1,7 @@
 package Weather::Underground;
 
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.24 2004/01/02 21:30:32 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.25 2004/01/06 19:14:57 mina Exp $
 #
 
 use strict;
@@ -10,7 +10,7 @@ use LWP::Simple qw($ua get);
 use HTML::TokeParser;
 use Fcntl qw(:flock);
 
-$VERSION = '2.13';
+$VERSION = '2.14';
 
 #
 # GLOBAL Variables Assignments
@@ -735,6 +735,13 @@ sub _state2result {
 	my $arrayref = shift;
 	my ($temperature_fahrenheit, $temperature_celsius);
 	my ($windchill_fahrenheit,   $windchill_celsius);
+
+	#
+	# Avoid some silly warnings of unitialized values
+	#
+	foreach (qw(content_PLACE content_TEMPERATURE content_WINDCHILL content_HUMIDITY content_CONDITIONS content_WIND content_UPDATED content_PRESSURE)) {
+		exists($stateref->{$_}) or ($stateref->{$_} = "");
+	}
 
 	$stateref->{"content_TEMPERATURE"} =~ s/\s//g;
 	($temperature_celsius)    = ($stateref->{"content_TEMPERATURE"} =~ /(-?\d+)[^a-z0-9]*?c/i);
