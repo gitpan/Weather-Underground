@@ -1,6 +1,9 @@
-$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.21 2004/06/08 17:25:09 mina Exp $
+$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.22 2004/12/08 00:03:15 mina Exp $
 
 Revision history for Perl extension Weather::Underground.
+
+2.20	Fix lack of support for negative temperatures.  Thanks to several people who notified
+	   me, especially Mathew White <innards@xmission.com> for submitting a patch
 
 2.19	Fix single-location match
 

@@ -1,7 +1,7 @@
 package Weather::Underground;
 
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.33 2004/06/08 17:20:16 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.34 2004/12/08 00:03:15 mina Exp $
 #
 
 use strict;
@@ -10,7 +10,7 @@ use LWP::Simple qw($ua get);
 use HTML::TokeParser;
 use Fcntl qw(:flock);
 
-$VERSION = '2.19';
+$VERSION = '2.20';
 
 #
 # GLOBAL Variables Assignments
@@ -563,8 +563,8 @@ sub get_weather {
 				$text = $token->[1] . $parser->get_text();
 				$text =~ s/&#([0-9]{1,3});/chr($1)/ge;
 				$text =~ s/&nbsp;/ /gi;
-				$text =~ s/^\s*\W*\s*//g;
-				$text =~ s/\s*\W*\s*$//g;
+				$text =~ s/^\s*[^\w-]*\s*//g;
+				$text =~ s/\s*[^\w-]*\s*$//g;
 				$text =~ s/\s+/ /g;
 				next if $text !~ /[a-z0-9]/i;
 				next if $text eq "IMG";
