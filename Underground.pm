@@ -16,7 +16,7 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '2.06';
+$VERSION = '2.07';
 
 
 # Preloaded methods go here.
@@ -241,9 +241,9 @@ sub getweather() {
 	#
 	if ($document =~ /Observed at/) {
 		$place = $self->{_place};
-		($temperature,$scale) = ($document =~ m|<tr><td>Temperature</td>\n<td>\n(\d+)&#176;(\w)|);
-		($humidity) = ($document =~ m|<tr><td>Humidity</td>\n<td>(\d+)\%</td></tr>\n|);
-		($conditions) = ($document =~ m|<tr><td>Conditions</td>\n<td>(.+?)</td></tr>\n|);
+		($temperature,$scale) = ($document =~ m|<tr BGCOLOR=.*?><td>Temperature</td>\n<td>\n(\d+)&#176;(\w)|);
+		($humidity) = ($document =~ m|<tr BGCOLOR=.*?><td>Humidity</td>\n<td>(\d+)\%</td></tr>\n|);
+		($conditions) = ($document =~ m|<tr BGCOLOR=.*?><td>Conditions</td>\n<td>(.+?)</td></tr>\n|);
 		$counter++;
 		&_debug("SINGLE-LOCATION PARSED $counter: $place: $conditions: $temperature * $scale . $humidity\% humity");
                 if ($scale =~ /c/i) {
