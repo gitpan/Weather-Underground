@@ -16,7 +16,7 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '2.02';
+$VERSION = '2.03';
 
 
 # Preloaded methods go here.
@@ -229,7 +229,7 @@ sub getweather() {
 			});
 		}
 	# The second format is to match single-listing matches:
-	while ($document =~ m|<tr ><td>Temperature</td>\n<td>([0-9]+)&#176;\s*(\w).*?</td></tr>\n<tr ><td>Humidity</td>\n<td>([0-9]+)\%</td></tr>\n<tr ><td>Dewpoint</td>\n<td>.+?</td></tr>\n<tr ><td>Wind</td>\n<td>.+?</td></tr>\n<tr ><td>Pressure</td>\n<td>.+?</td></tr>\n<tr ><td>Conditions</td>\n<td>(.+?)</td></tr>|gs) {
+	while ($document =~ m|<tr ><td>Temperature</td>\n<td>([0-9]+)&#176;\s*(\w).*?</td></tr>\n<tr ><td>Humidity</td>\n<td>([0-9]+)\%</td></tr>\n<tr ><td>Dew\s*point</td>\n<td>.+?</td></tr>\n<tr ><td>Wind</td>\n<td>.+?</td></tr>\n<tr ><td>Pressure</td>\n<td>.+?</td></tr>\n<tr ><td>Conditions</td>\n<td>(.+?)</td></tr>|gsi) {
 		$place = $self->{_place};
 		$temperature = $1;
 		$scale = $2;

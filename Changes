@@ -1,5 +1,7 @@
 Revision history for Perl extension Weather::Underground.
 
+2.03	WeatherUnderground website made a change in the HTML for single-listing preventing this module from
+	correctly parsing the needed info. This has been fixed.
 2.02	Renamed all references from celcius to celsius (including function names and hash key names)
 2.01	Fixed the _debug() method generating a warning when perl is called with the -w switch
 2.00	Initial public release after much beta testing consuming much 1.* versioning
