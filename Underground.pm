@@ -1,7 +1,7 @@
 package Weather::Underground;
 
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.25 2004/01/06 19:14:57 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.27 2004/04/30 17:52:47 mina Exp $
 #
 
 use strict;
@@ -10,7 +10,7 @@ use LWP::Simple qw($ua get);
 use HTML::TokeParser;
 use Fcntl qw(:flock);
 
-$VERSION = '2.14';
+$VERSION = '2.15';
 
 #
 # GLOBAL Variables Assignments
@@ -568,7 +568,7 @@ sub get_weather {
 				$text =~ s/\s+$//g;
 				$text =~ s/\s+/ /g;
 
-				if ($text =~ /^(current\s+)?conditions$/i && !$state{"intable"}) {
+				if ($text =~ /^(current\s+)?conditions$/i && !$state{"intable"} && $state{"currentconditions"}++) {
 
 					#
 					# We just entered the table that has the data we want
