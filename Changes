@@ -2,7 +2,7 @@ $Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.10 2003/0
 
 Revision history for Perl extension Weather::Underground.
 
-
+2.10	Fixed single-location match, thanks to Daniel Cergatti for the IRC /msg :)
 2.09	Fixed multi-location match, thanks to Rabin Vincent's submitted code.
 2.08	Fixed multi-location match, thanks to Frederic TYNDIUK's submitted code.
 2.07	Fixed single-location match, thanks to Mike Irwin's submitted patch

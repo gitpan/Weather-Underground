@@ -1,5 +1,5 @@
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/test.pl,v 1.8 2003/01/05 02:45:51 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/test.pl,v 1.10 2003/04/22 20:24:11 mina Exp $
 #
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl test.pl'
@@ -10,7 +10,7 @@
 # (It may become useful if the test is moved to ./t subdirectory.)
 
 BEGIN { $| = 1; print "1..7\n"; }
-END {print "not ok 1\n" unless $loaded;}
+END { print "not ok 1\n" unless $loaded; }
 use Weather::Underground;
 $loaded = 1;
 print "ok 1\n";
@@ -25,64 +25,61 @@ print "ok 1\n";
 # Test single-location matches:
 #
 
-$weather =
-Weather::Underground->new(
-        place   =>      "Montreal, Canada",
-        debug           =>      0
-        );
+$weather = Weather::Underground->new(
+	place => "Montreal, Canada",
+	debug => 0,
+);
 
 if ($weather) {
 	print "ok 2\n";
-	}
+}
 else {
 	print "not ok 2\n";
-	}
+}
 
 $arrayref = $weather->getweather();
 
 if ($arrayref) {
 	print "ok 3\n";
-	}
+}
 else {
 	print "not ok 3\n";
-	}
+}
 
 if ($arrayref->[0]->{fahrenheit} || $arrayref->[0]->{celsius}) {
 	print "ok 4\n";
-	}
+}
 else {
 	print "not ok 4\n";
-	}
-
+}
 
 #
 # Test multi-location matches:
 #
-$weather =
-Weather::Underground->new(
-        place   =>      "London",
-        debug           =>      0
-        );
+$weather = Weather::Underground->new(
+	place => "London",
+	debug => 0
+);
 
 if ($weather) {
 	print "ok 5\n";
-	}
+}
 else {
 	print "not ok 5\n";
-	}
+}
 
 $arrayref = $weather->getweather();
 
 if ($arrayref) {
 	print "ok 6\n";
-	}
+}
 else {
 	print "not ok 6\n";
-	}
+}
 
 if ($arrayref->[0]->{fahrenheit} || $arrayref->[0]->{celsius}) {
 	print "ok 7\n";
-	}
+}
 else {
 	print "not ok 7\n";
-	}
+}

@@ -1,44 +1,45 @@
 package Weather::Underground;
 
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.13 2003/01/05 02:45:51 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.18 2003/04/22 20:05:18 mina Exp $
 #
 
 use strict;
 use vars qw(
-	$VERSION @ISA @EXPORT @EXPORT_OK
-	$CGI $CGIVAR $MYNAME $DEBUG
-	);
+  $VERSION @ISA @EXPORT @EXPORT_OK
+  $CGI $CGIVAR $MYNAME $DEBUG
+);
 use LWP::Simple;
 require Exporter;
 require AutoLoader;
 
 @ISA = qw(Exporter AutoLoader);
+
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 @EXPORT = qw(
-	
-);
-$VERSION = '2.09';
 
+);
+$VERSION = '2.10';
 
 # Preloaded methods go here.
 
-sub _debug() {
-        my $notice = shift;
-        $@ = $notice;
-        if ($DEBUG) {
-                print "$MYNAME DEBUG NOTE: $notice\n";
-                return 1;
-                }
-        return 0;
-        }
+sub _debug {
+	my $notice = shift;
+	$@ = $notice;
+	if ($DEBUG) {
+		print "$MYNAME DEBUG NOTE: $notice\n";
+		return 1;
+	}
+	return 0;
+}
 
 # Autoload methods go after =cut, and are processed by the autosplit program.
 
 1;
 __END__
+
 # Below is the stub of documentation for your module. You better edit it!
 
 =head1 NAME
@@ -150,54 +151,61 @@ If the constructor or a method returns undef, the variable $@ will contain a tex
 
 =head1 AUTHOR
 
-Mina Naguib, webmaster@topfx.com
+Mina Naguib
+http://www.topfx.com
+mnaguib@cpan.org
+
+=head1 COPYRIGHT
+
+Copyright (C) 2002-2003 Mina Naguib.  All rights reserved.  Use is subject to the Perl license.
 
 =cut
-
 #
 # GLOBAL Variables Assignments
 #
 
-$CGI = 'http://www.wunderground.com/cgi-bin/findweather/getForecast';
+$CGI    = 'http://www.wunderground.com/cgi-bin/findweather/getForecast';
 $CGIVAR = 'query';
 $MYNAME = "Weather::Underground";
-$DEBUG = 0;
+$DEBUG  = 0;
 
 #
 # Public methods
 #
 
-sub new() {
+sub new {
 	my ($class, %parameters) = @_;
 	my $self;
 	$DEBUG = $parameters{debug};
-	&_debug("Creating a new $MYNAME object");
+	_debug("Creating a new $MYNAME object");
 	if (!$parameters{place}) {
-		&_debug("ERROR: Location not specified");
+		_debug("ERROR: Location not specified");
 		return undef;
-		}
+	}
 	$self = {
-		_place	=>	$parameters{place},
-		_url	=>	$CGI . '?' . $CGIVAR . '=' . $parameters{place}
-		};
+		_place => $parameters{place},
+		_url   => $CGI . '?' . $CGIVAR . '=' . $parameters{place}
+	};
 	bless($self, $class);
 	return $self;
-	}
+}
 
-sub getweather() {
+sub getweather {
 	my ($self) = @_;
 	my $document;
 	my ($place, $temperature, $scale, $humidity, $conditions);
 	my ($fahrenheit, $celsius);
 	my $arrayref = [];
-	my $counter = 0;
-	&_debug("Getting weather info for " . $self->{_place});
-	&_debug("Retrieving url " . $self->{_url});
+	my $counter  = 0;
+	_debug("Getting weather info for " . $self->{_place});
+	_debug("Retrieving url " . $self->{_url});
 	$document = get($self->{_url});
+
 	if (!$document) {
-		&_debug("Could not retrieve HTML document " . $self->{_url});
+		_debug("Could not retrieve HTML document " . $self->{_url});
 		return undef;
-		}
+	}
+
 	#
 	# Let's clean up stuff that's there to confuse the parser
 	#
@@ -205,83 +213,90 @@ sub getweather() {
 	$document =~ s|</b>||g;
 	$document =~ s/((?<=\W)[ \t]+)|([ \t]+(?=\W))//g;
 	$document =~ s/\n{2,}/\n/g;
-	&_debug("I retrieved the following data:\n\n\n\n\n$document\n\n\n\n\n");
+	$document =~ s/\r//g;
+	_debug("I retrieved the following data:\n\n\n\n\n$document\n\n\n\n\n");
+
 	#
 	# The first format is to match multiple-listing matches :
 	#
 	while ($document =~ m|<tr bgcolor=.*?>\n?<td><a\s.*?>([\w\s,]+?)</a></td>\n?<td>\n(\d+)&nbsp;&#176;(\w).*?</td>\n?<td>(\d+)\%</td>\n?<td>.*?</td>\n?<td>(.+?)</td><td>.*?</td>|gs) {
-		$place = $1;
+		$place       = $1;
 		$temperature = $2;
-		$scale = $3;
-		$humidity = $4;
-		$conditions = $5;
+		$scale       = $3;
+		$humidity    = $4;
+		$conditions  = $5;
 		$counter++;
-		&_debug("MULTI-LOCATION PARSED $counter: conditions: $conditions :: temperature $temperature * $scale :: humidity $humidity\% :: place $place");
+		_debug("MULTI-LOCATION PARSED $counter: conditions: $conditions :: temperature $temperature * $scale :: humidity $humidity\% :: place $place");
 		if ($scale =~ /c/i) {
-			&_debug("Temperature in Celsius. Converting accordingly");
-			$celsius = $temperature;
+			_debug("Temperature in Celsius. Converting accordingly");
+			$celsius    = $temperature;
 			$fahrenheit = int(($temperature * 1.8) + 32);
-			}
-		elsif ($scale =~ /f/i) {
-			&_debug("Temperature in Fahrenheit. Converting accordingly");
-			$fahrenheit = $temperature;
-			$celsius = int(($temperature  - 32)  / 1.8);
-			}
-		else {
-			&_debug("WARNING: Temperature is neither in Celsius or Fahrenheit");
-			$celsius = $temperature;
-			$fahrenheit = $temperature;
-			}
-		push (@$arrayref, {
-			place	=>	$place,
-			celsius	=>	$celsius,
-			fahrenheit	=>	$fahrenheit,
-			humidity	=>	$humidity,
-			conditions	=>	$conditions
-			});
 		}
+		elsif ($scale =~ /f/i) {
+			_debug("Temperature in Fahrenheit. Converting accordingly");
+			$fahrenheit = $temperature;
+			$celsius    = int(($temperature - 32) / 1.8);
+		}
+		else {
+			_debug("WARNING: Temperature is neither in Celsius or Fahrenheit");
+			$celsius    = $temperature;
+			$fahrenheit = $temperature;
+		}
+		push (
+			@$arrayref,
+			{
+				place      => $place,
+				celsius    => $celsius,
+				fahrenheit => $fahrenheit,
+				humidity   => $humidity,
+				conditions => $conditions
+			}
+		);
+	}
+
 	#
 	# The second format is to match single-listing matches:
 	#
 	if ($document =~ /Observed at/) {
 		$place = $self->{_place};
-		($temperature,$scale) = ($document =~ m|<tr BGCOLOR=.*?><td>Temperature</td>\n<td>\n(\d+)&nbsp;&#176;(\w)|);
-		($humidity) = ($document =~ m|<tr BGCOLOR=.*?><td>Humidity</td>\n<td>(\d+)\%</td></tr>\n|);
+		($temperature, $scale) = ($document =~ m|<tr BGCOLOR=.*?><td[^>]*>Temperature</td>\n<td>\n(\d+)&nbsp;&#176;(\w)|);
+		($humidity)   = ($document =~ m|<tr BGCOLOR=.*?><td>Humidity</td>\n<td>(\d+)\%</td></tr>\n|);
 		($conditions) = ($document =~ m|<tr BGCOLOR=.*?><td>Conditions</td>\n<td>(.+?)</td></tr>\n|);
 		$counter++;
-		&_debug("SINGLE-LOCATION PARSED $counter: $place: $conditions: $temperature * $scale . $humidity\% humity");
-                if ($scale =~ /c/i) {
-                        &_debug("Temperature in Celsius. Converting accordingly");
-                        $celsius = $temperature;
-                        $fahrenheit = int(($temperature * 1.8) + 32);
-                        }
-                elsif ($scale =~ /f/i) {
-                        &_debug("Temperature in Fahrenheit. Converting accordingly");
-                        $fahrenheit = $temperature;
-                        $celsius = int(($temperature  - 32)  / 1.8);
-                        }
-                else {
-                        &_debug("WARNING: Temperature is neither in Celsius or Fahrenheit");
-                        $celsius = $temperature;
-                        $fahrenheit = $temperature;
-                        }
-                push (@$arrayref, {
-                        place   =>      $place,
-                        celsius =>      $celsius,
-                        fahrenheit      =>      $fahrenheit,
-                        humidity        =>      $humidity,
-                        conditions      =>      $conditions
-                        });
+		_debug("SINGLE-LOCATION PARSED $counter: $place: $conditions: $temperature * $scale . $humidity\% humidity");
+		if ($scale =~ /c/i) {
+			_debug("Temperature in Celsius. Converting accordingly");
+			$celsius    = $temperature;
+			$fahrenheit = int(($temperature * 1.8) + 32);
 		}
+		elsif ($scale =~ /f/i) {
+			_debug("Temperature in Fahrenheit. Converting accordingly");
+			$fahrenheit = $temperature;
+			$celsius    = int(($temperature - 32) / 1.8);
+		}
+		else {
+			_debug("WARNING: Temperature is neither in Celsius or Fahrenheit");
+			$celsius    = $temperature;
+			$fahrenheit = $temperature;
+		}
+		push (
+			@$arrayref,
+			{
+				place      => $place,
+				celsius    => $celsius,
+				fahrenheit => $fahrenheit,
+				humidity   => $humidity,
+				conditions => $conditions
+			}
+		);
+	}
 	if (!$counter) {
-		&_debug("No matching places found");
+		_debug("No matching places found");
 		return undef;
-		}
+	}
 	else {
 		return $arrayref;
-		}
 	}
-
-
+}
 
 1;
