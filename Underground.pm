@@ -1,7 +1,7 @@
 package Weather::Underground;
 
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.32 2004/05/15 14:41:46 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.33 2004/06/08 17:20:16 mina Exp $
 #
 
 use strict;
@@ -10,7 +10,7 @@ use LWP::Simple qw($ua get);
 use HTML::TokeParser;
 use Fcntl qw(:flock);
 
-$VERSION = '2.18';
+$VERSION = '2.19';
 
 #
 # GLOBAL Variables Assignments
@@ -569,7 +569,7 @@ sub get_weather {
 				next if $text !~ /[a-z0-9]/i;
 				next if $text eq "IMG";
 
-				if ($state{"inheader"}) {
+				if ($state{"intable"} && !$state{"insummary"} && !$state{"incontent"}) {
 
 					#
 					# Text in the header
@@ -666,42 +666,28 @@ sub get_weather {
 					#
 					_debug("Entered main table");
 					$state{"intable"}   = 1;
-					$state{"inheader"}  = 0;
 					$state{"insummary"} = 0;
 					$state{"incontent"} = 0;
 				}
 				elsif ($state{"intable"}) {
 
 					#
-					# Start of a sub-table - just increment intable state so we detect closuee of main table properly
+					# Start of a sub-table - just increment intable state so we detect closure of main table properly
 					#
 					_debug("Sub-table started");
 					$state{"intable"}++;
-					if ($state{"intable"} == 2) {
 
-						#
-						# A new sub-table means we entered header, or jumping to summary or jumping to content
-						#
-						if (!$state{"inheader"} && !$state{"insummary"} && !$state{"incontent"}) {
-							_debug("That sub-table is the header");
-							$state{"inheader"} = 1;
-						}
+					#
+					# A new sub-table could mean we're entering summary or from summary to content
+					#
+					if (!$state{"insummary"} && !$state{"incontent"}) {
+						_debug("That sub-table is the summary");
+						$state{"insummary"} = 1;
 					}
-					elsif ($state{"intable"} == 3) {
-
-						#
-						# A new level 3 sub-table could mean we're jumping from header to summary or from summary to content
-						#
-						if ($state{"inheader"}) {
-							_debug("That sub-table is the summary");
-							$state{"inheader"}  = 0;
-							$state{"insummary"} = 1;
-						}
-						elsif ($state{"insummary"}) {
-							_debug("That sub-table is the content");
-							$state{"insummary"} = 0;
-							$state{"incontent"} = 1;
-						}
+					elsif ($state{"insummary"}) {
+						_debug("That sub-table is the content");
+						$state{"insummary"} = 0;
+						$state{"incontent"} = 1;
 					}
 				}
 			}

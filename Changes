@@ -1,6 +1,8 @@
-$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.20 2004/05/15 14:41:46 mina Exp $
+$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.21 2004/06/08 17:25:09 mina Exp $
 
 Revision history for Perl extension Weather::Underground.
+
+2.19	Fix single-location match
 
 2.18  Fix bug that reported wrong temperature if there was a decimal shown on the page
 
