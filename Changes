@@ -1,6 +1,15 @@
-$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.22 2004/12/08 00:03:15 mina Exp $
+$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.23 2005/09/17 23:25:29 mina Exp $
 
 Revision history for Perl extension Weather::Underground.
+
+3.00	Fix both single and multi-location errors due to site layout changes
+
+		Changed from parsing wunderground's standard results page to parsing their "mobile"
+		page since the second is much easier to parse.  This has had the unfortunate side
+		effect or returning far less keys in multi-location matches as well as no windchill
+		even in single-location matches.  The upside is that single-location matches now
+		return a lot more keys.  Refer to the internal documentation for the new keys
+		being returned for each place.
 
 2.20	Fix lack of support for negative temperatures.  Thanks to several people who notified
 	   me, especially Mathew White <innards@xmission.com> for submitting a patch

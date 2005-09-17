@@ -1,7 +1,7 @@
 package Weather::Underground;
 
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.34 2004/12/08 00:03:15 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.36 2005/09/17 23:25:29 mina Exp $
 #
 
 use strict;
@@ -10,13 +10,13 @@ use LWP::Simple qw($ua get);
 use HTML::TokeParser;
 use Fcntl qw(:flock);
 
-$VERSION = '2.20';
+$VERSION = '3.00';
 
 #
 # GLOBAL Variables Assignments
 #
 
-$CGI    = 'http://www.wunderground.com/cgi-bin/findweather/getForecast';
+$CGI    = 'http://mobile.wunderground.com/cgi-bin/findweather/getForecast';
 $CGIVAR = 'query';
 $MYNAME = "Weather::Underground";
 $DEBUG  = 0;
@@ -144,25 +144,65 @@ Each hash contains the following keys:
 
 (current sky, example: 'Partly cloudy')
 
-=item wind
+=item wind_direction
 
-(wind direction and speed)
+(wind direction, example: "North")
+
+=item wind_milesperhour
+
+(wind speed in miles per hour)
+
+=item wind_kilometersperhour
+
+(wind speed in kilometers per hour)
 
 =item pressure
 
 (the barometric pressure)
 
-=item windchill_celsius
-
-(the temperature in celsius with wind chill considered)
-
-=item windchill_fahrenheit
-
-(the temperature in fahrenheit with wind chill considered)
-
 =item updated
 
 (when the content was last updated on the server)
+
+=item clouds
+
+(description of clouds)
+
+=item dewpoint_celsius
+
+(the dew point in celsius)
+
+=item dewpoint_fahrenheit
+
+(the dew point in fahrenheit)
+
+=item moonphase
+
+(phase of the moon, example: "Full Moon")
+
+=item moonrise
+
+(time of moon rise, including timezone)
+
+=item moonset
+
+(time of moon setting, including timezone)
+
+=item sunrise
+
+(time of sun rising, including timezone)
+
+=item sunset
+
+(time of sun setting, including timezone)
+
+=item visibility_miles
+
+(visibility in miles)
+
+=item visibility_kilometers
+
+(visibility in kilometers)
 
 =back
 
@@ -216,12 +256,12 @@ If the constructor or a method returns undef, the variable $@ will contain a tex
 =head1 AUTHOR
 
 Mina Naguib
-http://www.topfx.com
+http://mina.naguib.ca
 mnaguib@cpan.org
 
 =head1 COPYRIGHT
 
-Copyright (C) 2002-2003 Mina Naguib.  All rights reserved.  Use is subject to the Perl license.
+Copyright (C) 2002-2005 Mina Naguib.  All rights reserved.  Use is subject to the Perl license.
 
 =cut
 
@@ -428,130 +468,12 @@ sub get_weather {
 		return undef;
 	}
 
-	if ($document =~ /search results/i) {
+	if ($document =~ /observed at/i) {
 
 		#
-		# We use multi-location algorithm
+		# Single-location match
 		#
-		_debug("Multi-location result detected");
 
-		while ($token = $parser->get_token) {
-			if ($token->[0] eq "T" && !$token->[2] && $state{"intable"}) {
-
-				#
-				# The beginning of a text token - retrieve the whole thing and clean it up
-				#
-				$text = $token->[1] . $parser->get_text();
-				$text =~ s/&#([0-9]{1,3});/chr($1)/ge;
-				$text =~ s/&nbsp;/ /gi;
-				next if $text !~ /[a-z0-9]/i;
-				$text =~ s/^\s+//g;
-				$text =~ s/\s+$//g;
-				$text =~ s/\s+/ /g;
-				if ($state{"inheader"}) {
-
-					#
-					# This is the title for a header column - store it for later use when encountering content under same column
-					#
-					_debug("Header text read [$text]");
-					$state{"header_$state{headernumber}"} = uc($text);
-				}
-				elsif ($state{"incontent"}) {
-
-					#
-					# This is content we're interested in - store it under the header title of the same column number
-					#
-					_debug("Content text read [$text]");
-					$state{ "content_" . $state{ "header_" . $state{"contentnumber"} } } = $text;
-				}
-			}
-			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TH") {
-
-				#
-				# A new cell in the header of the table that has the info we need has started
-				#
-				_debug("A new table header cell started");
-				_debug("This means we entered the interesting table") unless $state{"intable"};
-				$state{"headernumber"}++;
-				$state{"inheader"}  = 1;
-				$state{"intable"}   = 1;
-				$state{"incontent"} = 0;
-			}
-			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TR" && $state{"intable"}) {
-
-				#
-				# A new row in the table we're interested in started
-				#
-				if ($state{"inheader"}) {
-
-					#
-					# This is the end of the header and the beginning of the content rows
-					#
-					_debug("A new row started while we're in header - assuming end of header and upcoming content");
-					$state{"inheader"}      = 0;
-					$state{"incontent"}     = 1;
-					$state{"contentnumber"} = 0;
-				}
-				elsif ($state{"incontent"}) {
-
-					#
-					# This is a new content row beginning
-					#
-					_debug("A new row containing content started");
-					$state{"contentnumber"} = 0;
-
-					#
-					# Erase the data remembered from any previous rows
-					#
-					foreach (keys %state) {
-						delete $state{$_} if /^content_/;
-					}
-				}
-				else {
-
-					#
-					# Shouldn't reach here
-					#
-					_debug("Shouldn't see this - new row started while we're in table but we're not in header or content!");
-				}
-			}
-			elsif ($token->[0] eq "E" && uc($token->[1]) eq "TR" && $state{"incontent"}) {
-
-				#
-				# This is the end of a content row
-				#
-				# Save the data
-				#
-				_debug("End of content row");
-				_state2result(\%state, $arrayref);
-
-			}
-
-			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TD" && $state{"incontent"}) {
-
-				#
-				# The beginning of a new cell with content
-				#
-				_debug("Beginning of new content cell");
-				$state{"contentnumber"}++;
-			}
-			elsif ($token->[0] eq "E" && uc($token->[1]) eq "TABLE" && $state{"intable"}) {
-
-				#
-				# The table that has the data is finished - no need to keep parsing
-				#
-				_debug("End of table while we're in table - we're done");
-				last;
-			}
-		}
-
-	}
-
-	else {
-
-		#
-		# We use single-location algorithm
-		#
 		_debug("Single-location result detected");
 
 		while ($token = $parser->get_token) {
@@ -563,19 +485,20 @@ sub get_weather {
 				$text = $token->[1] . $parser->get_text();
 				$text =~ s/&#([0-9]{1,3});/chr($1)/ge;
 				$text =~ s/&nbsp;/ /gi;
-				$text =~ s/^\s*[^\w-]*\s*//g;
-				$text =~ s/\s*[^\w-]*\s*$//g;
 				$text =~ s/\s+/ /g;
+				$text =~ s/^\s+//;
+				$text =~ s/\s+$//;
 				next if $text !~ /[a-z0-9]/i;
 				next if $text eq "IMG";
 
-				if ($state{"intable"} && !$state{"insummary"} && !$state{"incontent"}) {
+				if ($state{"inheader"}) {
 
 					#
 					# Text in the header
 					#
 					_debug("Matched text in header [$text]");
-					if ($text =~ /updated\s*:?\s*(.+?)\s*observ/i) {
+
+					if ($text =~ /updated\s*:?\s*(.+?)\s*$/i) {
 						_debug("Matched key UPDATED [$1]");
 						$state{"content_UPDATED"} = $1;
 					}
@@ -583,29 +506,7 @@ sub get_weather {
 						_debug("Matched key PLACE [$1]");
 						$state{"content_PLACE"} = $1;
 					}
-				}
-				elsif ($state{"insummary"}) {
 
-					#
-					# Text in the summary
-					#
-					_debug("Matched text in summary [$text]");
-					if ($text =~ /[0-9]/) {
-
-						#
-						# It's probably the temperature
-						#
-						_debug("Matched key TEMPERATURE");
-						$state{"content_TEMPERATURE"} .= $text;
-					}
-					elsif ($text =~ /[a-z]/i) {
-
-						#
-						# It's probably the conditions
-						#
-						_debug("Matched key CONDITIONS");
-						$state{"content_CONDITIONS"} = $text;
-					}
 				}
 				elsif ($state{"incontent"}) {
 
@@ -618,7 +519,9 @@ sub get_weather {
 						# It's a header - remember to associate the upcoming content under it
 						#
 						_debug("Read header text [$text]");
-						$state{"header"} = uc($text);
+						my $h = $text;
+						$h =~ s/\s/_/g;
+						$state{"lastcontentheader"} = uc($h);
 					}
 					else {
 
@@ -626,17 +529,45 @@ sub get_weather {
 						# It's a content - associate it with the previous header
 						#
 						_debug("Read content text [$text]");
-						$state{ "content_" . $state{"header"} } .= $text . " ";
+						if (exists $state{"content_$state{lastcontentheader}"}) {
+							$state{"content_$state{lastcontentheader}"} .= " ";
+						}
+						$state{"content_$state{lastcontentheader}"} .= $text;
 					}
 				}
 			}
-			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TR" && $state{"incontent"}) {
+			elsif ($state{"interesting"} && $token->[0] eq "S" && uc($token->[1]) eq "TR") {
 
 				#
-				# A new header+content coming up
+				# Some interesting row starting
 				#
-				_debug("New content row starting");
-				$state{"contentnumber"} = 0;
+				_debug("Interesting row started");
+
+				if (!$state{"inheader"} && !$state{"incontent"}) {
+
+					#
+					# First interesting row is header
+					#
+					$state{"inheader"} = 1;
+					_debug("Entered header");
+				}
+				elsif ($state{"inheader"}) {
+
+					#
+					# New row means we are no longer in header
+					#
+					$state{"inheader"}  = 0;
+					$state{"incontent"} = 1;
+					_debug("Entered first row of content");
+				}
+				else {
+
+					#
+					# A new header+content coming up
+					#
+					_debug("New content row starting");
+					$state{"contentnumber"} = 0;
+				}
 			}
 			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TD" && $state{"incontent"}) {
 
@@ -651,69 +582,114 @@ sub get_weather {
 				#
 				# Start of some table
 				#
-				if (uc($token->[2]->{"id"}) eq "TABLE4") {
+				$state{"tablenumber"}++;
+				if (!$state{"interesting"} && $state{"tablenumber"} == 2) {
 
 					#
-					# Start of the left table
+					# The second table is the table we want to get the data out of
 					#
-					_debug("Entered left table");
-					$state{"inlefttable"} = 1;
-				}
-				elsif (uc($token->[2]->{"class"}) eq "SMALLTABLE" && $state{"inlefttable"} && !$state{"intable"}) {
-
-					#
-					# The first table inside the left table is the main table we want
-					#
-					_debug("Entered main table");
-					$state{"intable"}   = 1;
-					$state{"insummary"} = 0;
-					$state{"incontent"} = 0;
-				}
-				elsif ($state{"intable"}) {
-
-					#
-					# Start of a sub-table - just increment intable state so we detect closure of main table properly
-					#
-					_debug("Sub-table started");
-					$state{"intable"}++;
-
-					#
-					# A new sub-table could mean we're entering summary or from summary to content
-					#
-					if (!$state{"insummary"} && !$state{"incontent"}) {
-						_debug("That sub-table is the summary");
-						$state{"insummary"} = 1;
-					}
-					elsif ($state{"insummary"}) {
-						_debug("That sub-table is the content");
-						$state{"insummary"} = 0;
-						$state{"incontent"} = 1;
-					}
+					_debug("Entered the interesting table");
+					$state{"interesting"} = 1;
+					$state{"inheader"}    = 0;
+					$state{"incontent"}   = 0;
 				}
 			}
-			elsif ($token->[0] eq "E" && uc($token->[1]) eq "TABLE" && $state{"intable"}) {
-				if (--$state{"intable"}) {
+			elsif ($token->[0] eq "E" && uc($token->[1]) eq "TABLE" && $state{"interesting"}) {
 
-					#
-					# Closed table was a sub-table - ignore it
-					#
-					_debug("Sub-table closed");
-				}
-				else {
+				#
+				# Main table closed - Done parsing - save the data
+				#
+				_debug("Main table closed - end of interesting data");
+				_state2result(\%state, $arrayref);
 
-					#
-					# Main table closed - Done parsing - save the data
-					#
-					_debug("Main table closed - end of interesting data");
-					_state2result(\%state, $arrayref);
-
-					#
-					# No need to keep going - it's only 1 location
-					#
-					last;
-				}
+				#
+				# No need to keep going - it's only 1 location
+				#
+				last;
 			}
 		}
+	}
+	else {
+
+		#
+		# Multi-location match
+		#
+		_debug("Multi-location result detected");
+
+		while ($token = $parser->get_token) {
+
+			if ($token->[0] eq "T" && !$token->[2] && $state{"interesting"}) {
+
+				#
+				# The beginning of a text token - retrieve the whole thing and clean it up
+				#
+				$text = $token->[1] . $parser->get_text();
+				$text =~ s/&#([0-9]{1,3});/chr($1)/ge;
+				$text =~ s/&nbsp;/ /gi;
+				next if $text !~ /[a-z0-9]/i;
+				$text =~ s/^\s+//g;
+				$text =~ s/\s+$//g;
+				$text =~ s/\s+/ /g;
+
+				if ($state{"incontent"}) {
+
+					#
+					# This is content we're interested in - store it under the header title of the same column number
+					#
+					_debug("Content text read [$text]");
+					if (exists $state{"content"}) {
+						$state{"content"} .= ":";
+					}
+					$state{"content"} .= $text;
+				}
+
+			}
+			elsif (!$state{"interesting"} && $token->[0] eq "S" && uc($token->[1]) eq "TABLE") {
+				$state{"tablenumber"}++;
+				if ($state{"tablenumber"} == 2) {
+
+					#
+					# Second table is where the data is
+					#
+					_debug("Entered interesting table");
+					$state{"interesting"} = 1;
+				}
+			}
+			elsif ($state{"interesting"} && $token->[0] eq "S" && uc($token->[1]) eq "TR") {
+
+				_debug("Interesting row started");
+
+				if (!$state{"inheader"} && !$state{"incontent"}) {
+					_debug("Entered header");
+					$state{"inheader"} = 1;
+				}
+				elsif ($state{"inheader"}) {
+					_debug("Entered content");
+					$state{"inheader"}  = 0;
+					$state{"incontent"} = 1;
+				}
+			}
+			elsif ($state{"incontent"} && $token->[0] eq "E" && uc($token->[1]) eq "TR") {
+
+				#
+				# End of a content row
+				#
+				_debug("End of a content row.  Parsing [$state{content}].");
+				($state{"content_PLACE"}) = $state{"content"} =~ /^(.+?)\s*:/;
+				($state{"content_TEMPERATURE"}) = $state{"content"} =~ /\s*:\s*(.+)$/;
+				delete $state{"content"};
+				_state2result(\%state, $arrayref);
+			}
+			elsif ($state{"interesting"} && $token->[0] eq "E" && uc($token->[1]) eq "TABLE") {
+
+				#
+				# The table that has the data is finished - no need to keep parsing
+				#
+				_debug("End of table while we're in table - we're done");
+				last;
+			}
+		}
+
 	}
 
 	if (!@$arrayref) {
@@ -785,12 +761,14 @@ sub _state2result {
 	my $stateref = shift;
 	my $arrayref = shift;
 	my ($temperature_fahrenheit, $temperature_celsius);
-	my ($windchill_fahrenheit,   $windchill_celsius);
+	my ($dewpoint_fahrenheit,    $dewpoint_celsius);
+	my ($visibility_miles,       $visibility_kilometers);
+	my ($wind_direction,         $wind_milesperhour, $wind_kilometersperhour);
 
 	#
 	# Avoid some silly warnings of unitialized values
 	#
-	foreach (qw(content_PLACE content_TEMPERATURE content_WINDCHILL content_HUMIDITY content_CONDITIONS content_WIND content_UPDATED content_PRESSURE)) {
+	foreach (qw(content_PLACE content_UPDATED content_TEMPERATURE content_HUMIDITY content_DEW_POINT content_WIND content_PRESSURE content_CONDITIONS content_VISIBILITY content_CLOUDS content_SUNRISE content_SUNSET content_MOON_RISE content_MOON_SET content_MOON_PHASE)) {
 		exists($stateref->{$_}) or ($stateref->{$_} = "");
 	}
 
@@ -804,36 +782,71 @@ sub _state2result {
 		$temperature_fahrenheit = ($temperature_celsius * 1.8) + 32;
 	}
 
-	$stateref->{"content_WINDCHILL"} =~ s/\s//g;
-	($windchill_celsius)    = ($stateref->{"content_WINDCHILL"} =~ /(-?(?:\d|\.)+)[^a-z0-9]*?c/i);
-	($windchill_fahrenheit) = ($stateref->{"content_WINDCHILL"} =~ /(-?(?:\d|\.)+)[^a-z0-9]*?f/i);
-	if (!length($windchill_celsius) && length($windchill_fahrenheit)) {
-		$windchill_celsius = ($windchill_fahrenheit - 32) / 1.8;
+	$stateref->{"content_DEW_POINT"} =~ s/\s//g;
+	($dewpoint_celsius)    = ($stateref->{"content_DEW_POINT"} =~ /(-?(?:\d|\.)+)[^a-z0-9]*?c/i);
+	($dewpoint_fahrenheit) = ($stateref->{"content_DEW_POINT"} =~ /(-?(?:\d|\.)+)[^a-z0-9]*?f/i);
+	if (!length($dewpoint_celsius) && length($dewpoint_fahrenheit)) {
+		$dewpoint_celsius = ($dewpoint_fahrenheit - 32) / 1.8;
 	}
-	elsif (!length($windchill_fahrenheit) && length($windchill_celsius)) {
-		$windchill_fahrenheit = ($windchill_celsius * 1.8) + 32;
+	elsif (!length($dewpoint_fahrenheit) && length($dewpoint_celsius)) {
+		$dewpoint_fahrenheit = ($dewpoint_celsius * 1.8) + 32;
+	}
+
+	$stateref->{"content_VISIBILITY"} =~ s/\s//g;
+	($visibility_miles)      = ($stateref->{"content_VISIBILITY"} =~ /([0-9.]+)[^a-z0-9]*?m/i);
+	($visibility_kilometers) = ($stateref->{"content_VISIBILITY"} =~ /([0-9.]+)[^a-z0-9]*?k/i);
+	if (!length($visibility_miles) && length($visibility_kilometers)) {
+		$visibility_miles = $visibility_kilometers * 0.621371192;
+	}
+	elsif (!length($visibility_kilometers) && length($visibility_miles)) {
+		$visibility_kilometers = $visibility_miles * 1.609344;
 	}
 
 	$stateref->{"content_HUMIDITY"} =~ s/[^0-9]//g;
+
+	($wind_direction) = $stateref->{"content_WIND"} =~ /^([a-z -]+?)\s+(at|[0-9])/i;
+	$stateref->{"content_WIND"} =~ s/\s//g;
+	($wind_milesperhour)      = ($stateref->{"content_WIND"} =~ /([0-9.]+)[^a-z0-9]*?mp/i);
+	($wind_kilometersperhour) = ($stateref->{"content_WIND"} =~ /([0-9.]+)[^a-z0-9]*?km/i);
+	if (!length($wind_milesperhour) && length($wind_kilometersperhour)) {
+		$wind_milesperhour = $wind_kilometersperhour * 0.621371192;
+	}
+	elsif (!length($wind_kilometersperhour) && length($wind_milesperhour)) {
+		$wind_kilometersperhour = $wind_milesperhour * 1.609344;
+	}
+
 	push(
 		@$arrayref,
 		{
 			place                  => $stateref->{"content_PLACE"},
+			updated                => $stateref->{"content_UPDATED"},
 			temperature_celsius    => $temperature_celsius,
 			temperature_fahrenheit => $temperature_fahrenheit,
 			celsius                => $temperature_celsius,                # Legacy
 			fahrenheit             => $temperature_fahrenheit,             # Legacy
-			windchill_celsius      => $windchill_celsius,
-			windchill_fahrenheit   => $windchill_fahrenheit,
 			humidity               => $stateref->{"content_HUMIDITY"},
-			conditions             => $stateref->{"content_CONDITIONS"},
-			wind                   => $stateref->{"content_WIND"},
-			updated                => $stateref->{"content_UPDATED"},
+			dewpoint_celsius       => $dewpoint_celsius,
+			dewpoint_fahrenheit    => $dewpoint_fahrenheit,
+			wind_direction         => $wind_direction,
+			wind_milesperhoud      => $wind_milesperhour,
+			wind_kilometersperhour => $wind_kilometersperhour,
 			pressure               => $stateref->{"content_PRESSURE"},
+			conditions             => $stateref->{"content_CONDITIONS"},
+			visibility_miles       => $visibility_miles,
+			visibility_kilometers  => $visibility_kilometers,
+			clouds                 => $stateref->{"content_CLOUDS"},
+			sunrise                => $stateref->{"content_SUNRISE"},
+			sunset                 => $stateref->{"content_SUNSET"},
+			moonrise               => $stateref->{"content_MOON_RISE"},
+			moonset                => $stateref->{"content_MOON_SET"},
+			moonphase              => $stateref->{"content_MOON_PHASE"},
 		}
 	);
 
 }
 
+#
 # Leave me alone:
+#
 1;
+
