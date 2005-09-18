@@ -1,7 +1,7 @@
 package Weather::Underground;
 
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.36 2005/09/17 23:25:29 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.37 2005/09/18 12:35:28 mina Exp $
 #
 
 use strict;
@@ -10,7 +10,7 @@ use LWP::Simple qw($ua get);
 use HTML::TokeParser;
 use Fcntl qw(:flock);
 
-$VERSION = '3.00';
+$VERSION = '3.01';
 
 #
 # GLOBAL Variables Assignments
@@ -675,7 +675,7 @@ sub get_weather {
 				# End of a content row
 				#
 				_debug("End of a content row.  Parsing [$state{content}].");
-				($state{"content_PLACE"}) = $state{"content"} =~ /^(.+?)\s*:/;
+				($state{"content_PLACE"})       = $state{"content"} =~ /^(.+?)\s*:/;
 				($state{"content_TEMPERATURE"}) = $state{"content"} =~ /\s*:\s*(.+)$/;
 				delete $state{"content"};
 				_state2result(\%state, $arrayref);
@@ -828,7 +828,7 @@ sub _state2result {
 			dewpoint_celsius       => $dewpoint_celsius,
 			dewpoint_fahrenheit    => $dewpoint_fahrenheit,
 			wind_direction         => $wind_direction,
-			wind_milesperhoud      => $wind_milesperhour,
+			wind_milesperhour      => $wind_milesperhour,
 			wind_kilometersperhour => $wind_kilometersperhour,
 			pressure               => $stateref->{"content_PRESSURE"},
 			conditions             => $stateref->{"content_CONDITIONS"},
