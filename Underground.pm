@@ -1,7 +1,7 @@
 package Weather::Underground;
 
 #
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.37 2005/09/18 12:35:28 mina Exp $
+# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.38 2005/09/25 19:22:02 mina Exp $
 #
 
 use strict;
@@ -10,7 +10,7 @@ use LWP::Simple qw($ua get);
 use HTML::TokeParser;
 use Fcntl qw(:flock);
 
-$VERSION = '3.01';
+$VERSION = '3.02';
 
 #
 # GLOBAL Variables Assignments
@@ -577,22 +577,12 @@ sub get_weather {
 				_debug("New header or content cell starting");
 				$state{"contentnumber"}++;
 			}
-			elsif ($token->[0] eq "S" && uc($token->[1]) eq "TABLE") {
+			elsif (!$state{"interesting"} && $token->[0] eq "S" && uc($token->[1]) eq "TABLE" && $token->[2]->{border} == 1) {
 
-				#
-				# Start of some table
-				#
-				$state{"tablenumber"}++;
-				if (!$state{"interesting"} && $state{"tablenumber"} == 2) {
-
-					#
-					# The second table is the table we want to get the data out of
-					#
-					_debug("Entered the interesting table");
-					$state{"interesting"} = 1;
-					$state{"inheader"}    = 0;
-					$state{"incontent"}   = 0;
-				}
+				_debug("Entered the interesting table");
+				$state{"interesting"} = 1;
+				$state{"inheader"}    = 0;
+				$state{"incontent"}   = 0;
 			}
 			elsif ($token->[0] eq "E" && uc($token->[1]) eq "TABLE" && $state{"interesting"}) {
 

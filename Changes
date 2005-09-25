@@ -1,6 +1,9 @@
-$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.24 2005/09/18 12:35:27 mina Exp $
+$Header: /cvsroot/weather::underground/Weather/Underground/Changes,v 1.25 2005/09/25 19:22:01 mina Exp $
 
 Revision history for Perl extension Weather::Underground.
+
+3.02	Fix single location matches returning nothing if there was a special advisory posted -
+		thanks to several people for the notice
 
 3.01	Fix typo in returned results keys. "wind_milesperhour" was "wind_milesperhoud" -
 		thanks to Daniel Bosold <dan@bosold.net> for the report and patch.
