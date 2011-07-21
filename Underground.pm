@@ -1,16 +1,12 @@
 package Weather::Underground;
 
-#
-# $Header: /cvsroot/weather::underground/Weather/Underground/Underground.pm,v 1.38 2005/09/25 19:22:02 mina Exp $
-#
-
 use strict;
 use vars qw($VERSION $CGI $CGIVAR $MYNAME $DEBUG %MODULES);
 use LWP::Simple qw($ua get);
 use HTML::TokeParser;
 use Fcntl qw(:flock);
 
-$VERSION = '3.02';
+$VERSION = '3.03';
 
 #
 # GLOBAL Variables Assignments
@@ -763,8 +759,8 @@ sub _state2result {
 	}
 
 	$stateref->{"content_TEMPERATURE"} =~ s/\s//g;
-	($temperature_celsius)    = ($stateref->{"content_TEMPERATURE"} =~ /(-?(?:\d|\.)+)[^a-z0-9]*?c/i);
-	($temperature_fahrenheit) = ($stateref->{"content_TEMPERATURE"} =~ /(-?(?:\d|\.)+)[^a-z0-9]*?f/i);
+	($temperature_celsius)    = ($stateref->{"content_TEMPERATURE"} =~ /(-?([?[0-9]*\.?[0-9]+))&deg;c/i);
+	($temperature_fahrenheit) = ($stateref->{"content_TEMPERATURE"} =~ /(-?([?[0-9]*\.?[0-9]+))&deg;f/i);
 	if (!length($temperature_celsius) && length($temperature_fahrenheit)) {
 		$temperature_celsius = ($temperature_fahrenheit - 32) / 1.8;
 	}
@@ -773,8 +769,8 @@ sub _state2result {
 	}
 
 	$stateref->{"content_DEW_POINT"} =~ s/\s//g;
-	($dewpoint_celsius)    = ($stateref->{"content_DEW_POINT"} =~ /(-?(?:\d|\.)+)[^a-z0-9]*?c/i);
-	($dewpoint_fahrenheit) = ($stateref->{"content_DEW_POINT"} =~ /(-?(?:\d|\.)+)[^a-z0-9]*?f/i);
+	($dewpoint_celsius)    = ($stateref->{"content_DEW_POINT"} =~ /(-?([?[0-9]*\.?[0-9]+))&deg;c/i);
+	($dewpoint_fahrenheit) = ($stateref->{"content_DEW_POINT"} =~ /(-?([?[0-9]*\.?[0-9]+))&deg;f/i);
 	if (!length($dewpoint_celsius) && length($dewpoint_fahrenheit)) {
 		$dewpoint_celsius = ($dewpoint_fahrenheit - 32) / 1.8;
 	}
